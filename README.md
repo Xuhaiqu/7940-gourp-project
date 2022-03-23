@@ -1,11 +1,12 @@
 # 7940-gourp-project
 Group members:
-Wenxun Zhan; XU Yang;Haiqu Xu 
+Zhan Wenxun; Yang Xu; Xu Haiqu
 
-the token:5250605654:AAGO0sh10y91YK9LmTbxi0u6eIoKUoWiLvo
+token:5250605654:AAGO0sh10y91YK9LmTbxi0u6eIoKUoWiLvo
 
-to open the chatbot :t.me/group45_7940bot
+chatbot name: group45
 
 commands:
-1,type:/recipe     this is the first function
-2,type:/recommend  this is the second function
+
+1. /recipe     this is the first function
+2. /recommend  this is the second function

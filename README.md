@@ -8,5 +8,7 @@ chatbot name: group45
 
 commands:
 
-1. /recipe     this is the first function
-2. /recommend  this is the second function
+1. /user		all users information
+1. /recipe      one recipe information (西红柿炒鸡蛋)
+1. /recipeall   all recipe information (because all are too long, just output five)
+2. /recommend   waiting for come true

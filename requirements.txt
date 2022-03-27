@@ -1,3 +1,4 @@
 telegram
 configparser
 redis
+firebase-admin

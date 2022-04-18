@@ -1,4 +1,6 @@
 telegram
 configparser
-redis
-firebase-admin
+numpy
+pandas
+google.cloud
+mysql.connector

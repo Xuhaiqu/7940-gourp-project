@@ -8,7 +8,6 @@ chatbot name: group45
 
 commands:
 
-1. /user		all users information
-1. /recipe      one recipe information (西红柿炒鸡蛋)
-1. /recipeall   all recipe information (because all are too long, just output five)
-2. /recommend   waiting for come true
+1. /recipe (keyword)            实现精准搜索 (冰糖红枣炖银耳)
+1. /search (partial keyword)    实现模糊搜索 (红枣)
+2. /tag                         显示所有菜谱的标签（不重复）

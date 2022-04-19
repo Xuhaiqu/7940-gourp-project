@@ -1,6 +1,7 @@
 # telegram chatbot needed package
 import logging
 import configparser
+from setuptools import Command
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, CallbackQueryHandler
 
@@ -21,6 +22,7 @@ def main():
     dispatcher = updater.dispatcher
 
     # Configure Cloud SQL
+    global cnx
     cnx = mysql.connector.connect(
         user=config['SQL']['USER'],
         password=config['SQL']['PASSWORD'],
@@ -40,7 +42,9 @@ def main():
     steps = ['recipeID', 'steps', 'content']
     global recipe
     recipe = ['recipeid', 'recipename', 'introduce', 'Ingredients', 'tags', 'tips', 'Difficulty', 'CookingMethod', 'EstimatedTime']
-    
+    global favorite
+    favorite = ['recipeid', 'username', 'recipename']
+
     # Realize user message to uppercase reply
     echo_handler = MessageHandler(Filters.text & (~Filters.command), echo)
     dispatcher.add_handler(echo_handler)
@@ -50,6 +54,7 @@ def main():
     dispatcher.add_handler(CommandHandler("recipe", recipe_command))
     dispatcher.add_handler(CommandHandler("search", search_command))
     dispatcher.add_handler(CommandHandler("tag", tag_command))
+    dispatcher.add_handler(CommandHandler("favorite", favoriate_command))
     dispatcher.add_handler(CommandHandler("help", help_command))
 
     # Bind the function that handles the click event of the Inline Button
@@ -122,9 +127,13 @@ def recipe_command(update: Update, context: CallbackContext) -> None:
         reply = reply + 'Step' + str(index+1) + ': ' + step['content'] + '\n'     
     reply = reply + '\n'
 
+    recipeid = recipe_data['recipeid'][0]
+    recipename = recipe_data['recipename'][0]
+    username = update.message.from_user['username']
+
     # Set Inline Button
-    keyboard = [[InlineKeyboardButton("Like", callback_data='Like'),
-                 InlineKeyboardButton("Favorite", callback_data='Favorite')],
+    keyboard = [[InlineKeyboardButton("️️🥰", callback_data='Like'),
+                 InlineKeyboardButton("Favorite", callback_data=recipeid + ',' + recipename + ',' + username)],
                 [
                  InlineKeyboardButton("Share With Friends", switch_inline_query=" Share with you this recipe chatbot!")
                 ]
@@ -164,7 +173,6 @@ def tag_command(update: Update, context: CallbackContext) -> None:
     """"Return message when the command /tag is issued."""
 
     # define column name
-    steps = ['recipeID', 'steps', 'content']
     recipe = ['recipeid', 'recipename', 'introduce', 'Ingredients', 'tags', 'tips', 'Difficulty', 'CookingMethod', 'EstimatedTime']
 
     # get all recipe data to build tag_list
@@ -184,14 +192,52 @@ def tag_command(update: Update, context: CallbackContext) -> None:
 
     for index, row in frame1.iterrows():
         for tag in row['tags']:
-            recipe_with_tags.at[index, tag] = 1
             # 去除掉tag里的空格
             tag = tag.strip()
+            recipe_with_tags.at[index, tag] = 1
             if tag not in tag_list:
                 tag_list.append(tag)
 
-    reply = '#'
-    reply = reply + '  #'.join(tag_list)
+    recipe_with_tags = recipe_with_tags.fillna(0)
+
+    # if /tag command have keyword
+    if (len(context.args) != 0):
+        # acquire recipes with keyword tag
+        recipe_for_tag = recipe_with_tags[recipe_with_tags[context.args[0]] == 1]
+        recipe_for_tag.reset_index(drop=True, inplace=True)
+        reply = ''
+        for i in range(recipe_for_tag.shape[0]):
+            reply = reply + recipe_for_tag['recipename'][i] + '\n'
+        update.message.reply_text(reply)
+
+    # /tag command don't have keyword
+    else:
+        reply = '#'
+        reply = reply + '  #'.join(tag_list)
+        update.message.reply_text(reply)
+
+
+# show user's favorite
+def favoriate_command(update: Update, context: CallbackContext) -> None:
+    """"Return message when the command /tag is issued."""
+    
+    username = update.message.from_user['username']
+    # acquire the correspond recipe data
+    query1 = ("select * from favorite where username = '" + username + "'")
+    print(query1)
+    # use global cursor
+    global cursor
+    cursor.execute(query1)
+    global favorite
+    favorite_recipe = pd.DataFrame(cursor.fetchall(), columns=favorite)
+    
+    reply = 'Your Favroite Recipe: \n\n'
+    # Loop over multiple recipes
+    for i in range(favorite_recipe.shape[0]):
+        # combine reply information (just recipe name)
+        reply = reply + favorite_recipe.loc[i,:]['recipename'] + '\n'
+
+    reply = reply + '\n'
     update.message.reply_text(reply)
 
 
@@ -215,7 +261,18 @@ def button(update: Update, context: CallbackContext) -> None:
 
     update.callback_query.answer()
     
-    update.callback_query.message.reply_text(text=update.callback_query.data)
+    recipeid, recipename, username = update.callback_query.data.split(',')
+
+    query = ("insert into favorite values("+recipeid+",'"+username+"','"+recipename+"')")
+    print(query)
+    # use global cursor
+    global cursor
+    cursor.execute(query)
+    # commit data change
+    global cnx
+    cnx.commit()
+    
+    update.callback_query.message.reply_text(text='Favorite completed!')
 
 
 if __name__ == '__main__':

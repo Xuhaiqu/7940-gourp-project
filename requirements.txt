@@ -4,3 +4,4 @@ numpy
 pandas
 google.cloud
 mysql.connector
+python-telegram-bot

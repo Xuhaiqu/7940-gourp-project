@@ -1,8 +1,8 @@
 # telegram chatbot needed package
 import logging
 import configparser
-from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, CallbackQueryHandler
 
 # Google Cloud SQL needed package
 import sqlite3
@@ -12,25 +12,26 @@ import mysql.connector
 from google.cloud import storage
 
 
-def main():    
-    # Config Telegram
+# chatbot main function
+def main():
+    # Configure Telegram
     config = configparser.ConfigParser()
     config.read('config.ini')
     updater = Updater(token=(config['TELEGRAM']['ACCESS_TOKEN']), use_context=True)
     dispatcher = updater.dispatcher
 
-    # Config Cloud SQL
+    # Configure Cloud SQL
     cnx = mysql.connector.connect(
         user=config['SQL']['USER'],
         password=config['SQL']['PASSWORD'],
         host=config['SQL']['HOST'],
         database=config['SQL']['DATABASE']
     )
-    # define global cursor
+    # define global cursor for subsequent inquiries
     global cursor
     cursor = cnx.cursor()
 
-    # set user logging function
+    # set record user log
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                         level=logging.INFO)
 
@@ -40,27 +41,49 @@ def main():
     global recipe
     recipe = ['recipeid', 'recipename', 'introduce', 'Ingredients', 'tags', 'tips', 'Difficulty', 'CookingMethod', 'EstimatedTime']
     
-    # 实现用户消息转大写回复
+    # Realize user message to uppercase reply
     echo_handler = MessageHandler(Filters.text & (~Filters.command), echo)
     dispatcher.add_handler(echo_handler)
 
     # Bind the following commands to the corresponding methods
+    dispatcher.add_handler(CommandHandler("start", start_command))
     dispatcher.add_handler(CommandHandler("recipe", recipe_command))
     dispatcher.add_handler(CommandHandler("search", search_command))
     dispatcher.add_handler(CommandHandler("tag", tag_command))
+    dispatcher.add_handler(CommandHandler("help", help_command))
+
+    # Bind the function that handles the click event of the Inline Button
+    updater.dispatcher.add_handler(CallbackQueryHandler(button))
+
+    # Bind the function that handles the error
+    dispatcher.add_error_handler(error)
 
     # To start the bot:
     updater.start_polling()
     updater.idle()
 
 
-# Convert lowercase to uppercase
+# Convert user message to uppercase
 def echo(update, context):
     reply_message = update.message.text.upper()
     logging.info("Update: " + str(update))
     logging.info("context: " + str(context))
     context.bot.send_message(chat_id=update.effective_chat.id, text= reply_message)    
-    
+
+
+# Start chat with bot
+# Introduce available commands
+def start_command(update: Update, context: CallbackContext) -> None:
+    """"Return message when the command /start is issued."""
+
+    reply = "Hello! I am your Recipe Chatbot ~\n\n"
+    reply = reply + "/recipe (keyword): Precise Search\n"
+    reply = reply + "/search (partial_keyword): Blurry Search\n"
+    reply = reply + "/tag: Show Some Recipe Tags\n"
+    reply = reply + "/help: Developer Information"
+
+    update.message.reply_text(reply)
+
 
 # Realize precise search
 # Default result is only one recipe
@@ -87,18 +110,28 @@ def recipe_command(update: Update, context: CallbackContext) -> None:
 
     # combine reply information
     reply = ''
-    reply = reply + 'Name: ' + recipe_data['recipename'][0] + '\n'
+    reply = reply + recipe_data['recipename'][0] + '\n\n'
     reply = reply + 'Introduce: ' + recipe_data['introduce'][0] + '\n'
     reply = reply + 'Need: ' + recipe_data['Ingredients'][0] + '\n'
     reply = reply + 'Tags: ' + recipe_data['tags'][0] + '\n'
     reply = reply + 'Tips: ' + recipe_data['tips'][0] + '\n'
-    reply = reply + 'Time: ' + recipe_data['EstimatedTime'][0] + '\n'
+    reply = reply + 'Time: ' + recipe_data['EstimatedTime'][0] + '\n\n'
     # add steps information
+    reply = reply + 'How to do this ?\n'
     for index, step in steps_data.iterrows():
         reply = reply + 'Step' + str(index+1) + ': ' + step['content'] + '\n'     
     reply = reply + '\n'
 
-    update.message.reply_text(reply)
+    # Set Inline Button
+    keyboard = [[InlineKeyboardButton("Like", callback_data='Like'),
+                 InlineKeyboardButton("Favorite", callback_data='Favorite')],
+                [
+                 InlineKeyboardButton("Share With Friends", switch_inline_query=" Share with you this recipe chatbot!")
+                ]
+               ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    update.message.reply_text(reply, reply_markup = reply_markup)
 
 
 # Realize blurry search
@@ -125,8 +158,11 @@ def search_command(update: Update, context: CallbackContext) -> None:
     reply = reply + '\n'
     update.message.reply_text(reply)
 
+
+# Show some recipe tags
 def tag_command(update: Update, context: CallbackContext) -> None:
     """"Return message when the command /tag is issued."""
+
     # define column name
     steps = ['recipeID', 'steps', 'content']
     recipe = ['recipeid', 'recipename', 'introduce', 'Ingredients', 'tags', 'tips', 'Difficulty', 'CookingMethod', 'EstimatedTime']
@@ -154,8 +190,33 @@ def tag_command(update: Update, context: CallbackContext) -> None:
             if tag not in tag_list:
                 tag_list.append(tag)
 
-    reply = ' #'.join(tag_list)
+    reply = '#'
+    reply = reply + '  #'.join(tag_list)
     update.message.reply_text(reply)
+
+
+# show developer information
+def help_command(update: Update, context: CallbackContext) -> None:
+    """"Return message when the command /help is issued."""
+
+    reply = "This chatbot is build by\n-  Zhan Wenxun\n-  Yang Xu\n-  Xu Haiqu.\n"
+    reply = reply + "License by HKBU\n"
+    reply = reply + "(https://www.hkbu.edu.hk/eng/main/index.jsp)"
+    update.message.reply_text(reply)
+
+
+# dealing with error
+def error(update, context):
+    print(f"Update {update} caused error {context.error}")
+
+
+def button(update: Update, context: CallbackContext) -> None:
+    """Parses the CallbackQuery and updates the message text."""
+
+    update.callback_query.answer()
+    
+    update.callback_query.message.reply_text(text=update.callback_query.data)
+
 
 if __name__ == '__main__':
     main()

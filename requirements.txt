@@ -5,3 +5,5 @@ pandas
 google.cloud
 mysql.connector
 python-telegram-bot
+google-cloud-pubsub
+google-cloud-storage

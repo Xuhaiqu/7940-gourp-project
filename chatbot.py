@@ -2,7 +2,7 @@
 import logging
 import configparser
 from setuptools import Command
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, CallbackQueryHandler
 
 # Google Cloud SQL needed package
@@ -85,6 +85,8 @@ def start_command(update: Update, context: CallbackContext) -> None:
     reply = reply + "/recipe (keyword): Precise Search\n"
     reply = reply + "/search (partial_keyword): Blurry Search\n"
     reply = reply + "/tag: Show Some Recipe Tags\n"
+    reply = reply + "/tag (keyword): Show Recipes Belong This Tag\n"
+    reply = reply + "/favorite: Show Your Favorite Recipes\n"
     reply = reply + "/help: Developer Information"
 
     update.message.reply_text(reply)
@@ -132,10 +134,10 @@ def recipe_command(update: Update, context: CallbackContext) -> None:
     username = update.message.from_user['username']
 
     # Set Inline Button
-    keyboard = [[InlineKeyboardButton("️️🥰", callback_data='Like'),
-                 InlineKeyboardButton("Favorite", callback_data=recipeid + ',' + recipename + ',' + username)],
+    keyboard = [[InlineKeyboardButton("🔍 Baidu", url="https://baike.baidu.com/item/"+recipename),
+                 InlineKeyboardButton("⭐ Favorite", callback_data=recipeid + ',' + recipename + ',' + username)],
                 [
-                 InlineKeyboardButton("Share With Friends", switch_inline_query=" Share with you this recipe chatbot!")
+                 InlineKeyboardButton("Share With Friends", switch_inline_query=" Share with you: /recipe " + recipename)
                 ]
                ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -159,13 +161,18 @@ def search_command(update: Update, context: CallbackContext) -> None:
     recipe_data = pd.DataFrame(cursor.fetchall(), columns=recipe)
 
     reply = ''
+    keyboard = []
     # Loop over multiple recipes
     for i in range(recipe_data.shape[0]):
-        # combine reply information (just recipe name)
-        reply = reply + recipe_data.loc[i,:]['recipename'] + '\n'
-
+        reply = reply + recipe_data['recipename'][i] + '\n'
+        # return reply keyboard for quick search details
+        keyboard.append(['/recipe ' + recipe_data['recipename'][i]+''])
+        
     reply = reply + '\n'
-    update.message.reply_text(reply)
+    print(keyboard)
+    reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+
+    update.message.reply_text(reply, reply_markup=reply_markup)
 
 
 # Show some recipe tags
@@ -205,10 +212,22 @@ def tag_command(update: Update, context: CallbackContext) -> None:
         # acquire recipes with keyword tag
         recipe_for_tag = recipe_with_tags[recipe_with_tags[context.args[0]] == 1]
         recipe_for_tag.reset_index(drop=True, inplace=True)
+
+        # if recipe numbers > 5, then just show 5 recipes
+        if (recipe_for_tag.shape[0] > 3):
+            length = 3
+        else:
+            length = recipe_for_tag.shape[0]
+
         reply = ''
-        for i in range(recipe_for_tag.shape[0]):
+        keyboard = []
+        for i in range(length):
             reply = reply + recipe_for_tag['recipename'][i] + '\n'
-        update.message.reply_text(reply)
+            keyboard.append(['/recipe ' + recipe_for_tag['recipename'][i]])
+        
+        print(keyboard)
+        reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+        update.message.reply_text(reply, reply_markup=reply_markup)
 
     # /tag command don't have keyword
     else:

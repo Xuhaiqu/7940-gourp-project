@@ -4,7 +4,7 @@ Group number: 45
 
 Group members (Github Account):
 - Zhan Wenxun (zhanwenxun)
-- Yang Xu (???)
+- Yang Xu (Amadeusy)
 - Xu Haiqu (Xuhaiqu)
 
 chatbot name: group45

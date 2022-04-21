@@ -1,8 +1,10 @@
 # 7940-gourp-project
-Group members:
-- Zhan Wenxun
-- Yang Xu
-- Xu Haiqu
+
+Group number: 45
+Group members (Github Account):
+- Zhan Wenxun (zhanwenxun)
+- Yang Xu (???)
+- Xu Haiqu (Xuhaiqu)
 
 chatbot name: group45
 

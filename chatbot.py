@@ -134,6 +134,9 @@ def recipe_command(update: Update, context: CallbackContext) -> None:
     username = update.message.from_user['username']
 
     # Set Inline Button
+    # 1.Baidu : Go to the Baidu Baike webpage of the corresponding recipe
+    # 2.Favorite : Pass the user's favorite recipe data to the database
+    # 3.Share With Friends: Share the chatbot and the command to get the recipe to selected friends
     keyboard = [[InlineKeyboardButton("🔍 Baidu", url="https://baike.baidu.com/item/"+recipename),
                  InlineKeyboardButton("⭐ Favorite", callback_data=recipeid + ',' + recipename + ',' + username)],
                 [

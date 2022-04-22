@@ -145,6 +145,9 @@ def recipe_command(update: Update, context: CallbackContext) -> None:
                ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
+    logging.info("Update: " + str(update))
+    logging.info("context: " + str(context))
+
     update.message.reply_text(reply, reply_markup = reply_markup)
 
 
@@ -174,6 +177,9 @@ def search_command(update: Update, context: CallbackContext) -> None:
     reply = reply + '\n'
     print(keyboard)
     reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+
+    logging.info("Update: " + str(update))
+    logging.info("context: " + str(context))
 
     update.message.reply_text(reply, reply_markup=reply_markup)
 
@@ -209,6 +215,9 @@ def tag_command(update: Update, context: CallbackContext) -> None:
                 tag_list.append(tag)
 
     recipe_with_tags = recipe_with_tags.fillna(0)
+
+    logging.info("Update: " + str(update))
+    logging.info("context: " + str(context))
 
     # if /tag command have keyword
     if (len(context.args) != 0):
@@ -258,8 +267,11 @@ def favoriate_command(update: Update, context: CallbackContext) -> None:
     for i in range(favorite_recipe.shape[0]):
         # combine reply information (just recipe name)
         reply = reply + favorite_recipe.loc[i,:]['recipename'] + '\n'
-
     reply = reply + '\n'
+
+    logging.info("Update: " + str(update))
+    logging.info("context: " + str(context))
+
     update.message.reply_text(reply)
 
 
@@ -293,6 +305,9 @@ def button(update: Update, context: CallbackContext) -> None:
     # commit data change
     global cnx
     cnx.commit()
+
+    logging.info("Update: " + str(update))
+    logging.info("context: " + str(context))
     
     update.callback_query.message.reply_text(text='Favorite completed!')
 
